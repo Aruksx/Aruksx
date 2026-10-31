@@ -465,13 +465,17 @@
     background: var(--white);
     color: var(--text);
     border: 2px solid var(--lavender-dark) !important;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     width:min(176px, calc(100vw - 24px));
     height:52px;
-    padding:8px;
-    font-size:clamp(12px, 3.8vw, 15px);
-    line-height:1.15;
+    padding:4px 12px;
+    font-size:clamp(11px, 3.8vw, 14px);
+    line-height:1.2;
+    text-align:center;
     white-space:normal;
-    overflow-wrap:anywhere;
+    overflow-wrap:break-word;
     transform:translate(var(--dodge-x, 0px), var(--dodge-y, 0px));
     transition:transform 0.18s ease, box-shadow 0.2s ease, background 0.2s ease;
   }
