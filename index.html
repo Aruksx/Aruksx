@@ -68,6 +68,19 @@
     animation:dreamscapeGlow 9s ease-in-out infinite alternate;
   }
 
+  .background-video{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    opacity:0.24;
+    mix-blend-mode:soft-light;
+    filter:saturate(0.82) brightness(1.06);
+    pointer-events:none;
+  }
+
   @keyframes dreamscapeDrift{
     0%,100%{ transform:scale(1.04) translate3d(-0.5%,0.35%,0); }
     50%{ transform:scale(1.1) translate3d(0.5%,-0.35%,0); }
@@ -85,7 +98,7 @@
     width:100%; height:100%;
     overflow:hidden;
     pointer-events:none;
-    z-index:1;
+    z-index:2;
   }
 
   .heart{
@@ -240,7 +253,7 @@
   /* ---------- Main container ---------- */
   .container{
     position:relative;
-    z-index:2;
+    z-index:3;
     width:100%;
     max-width:480px;
     text-align:center;
@@ -447,8 +460,13 @@
     background: var(--white);
     color: var(--text);
     border: 2px solid var(--lavender-dark) !important;
-  }
-  .btn-no{
+    width:min(176px, calc(100vw - 24px));
+    height:52px;
+    padding:8px;
+    font-size:clamp(12px, 3.8vw, 15px);
+    line-height:1.15;
+    white-space:normal;
+    overflow-wrap:anywhere;
     transform:translate(var(--dodge-x, 0px), var(--dodge-y, 0px));
     transition:transform 0.18s ease, box-shadow 0.2s ease, background 0.2s ease;
   }
@@ -526,6 +544,10 @@
 </head>
 <body>
 
+<video class="background-video" id="backgroundVideo" autoplay muted loop playsinline aria-hidden="true" tabindex="-1">
+  <source src="YeM11xIew4BB-nr3mINs74lg6xxDCKvnVI3wzfl1po4.mp4" type="video/mp4">
+</video>
+
 <div class="dreamscape" aria-hidden="true"></div>
 
 <!-- Floating hearts -->
@@ -594,6 +616,8 @@
   // ---------- Full-screen ambient particles ----------
   const heartsContainer = document.getElementById('hearts');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const backgroundVideo = document.getElementById('backgroundVideo');
+  if(reducedMotion) backgroundVideo.pause();
   const particleTypes = [
     {className:'particle-heart', symbols:['♡','❤','💕','💗'], weight:5},
     {className:'particle-flower', symbols:['✿','❀','🌸'], weight:2},
@@ -804,8 +828,13 @@
   const noDodgeMessages = ['No? 🥺', 'Are you sure?', 'Think again! 💗', 'Really? 🥹', 'Pretty please?'];
   let noConfirmationIndex = 0;
   let previousDodgeMessage = '';
+  let noButtonPlaceholder = null;
 
   function resetNoButton(){
+    if(noButtonPlaceholder?.isConnected){
+      noButtonPlaceholder.replaceWith(noBtn);
+    }
+    noButtonPlaceholder = null;
     noBtn.classList.remove('is-dodging');
     ['position','left','top','z-index','--dodge-x','--dodge-y','--dodge-angle'].forEach((property) => {
       noBtn.style.removeProperty(property);
@@ -855,20 +884,34 @@
     const currentBounds = noBtn.getBoundingClientRect();
     const destination = candidates[Math.floor(Math.random() * candidates.length)];
     if(!noBtn.classList.contains('is-dodging')){
+      noButtonPlaceholder = document.createElement('span');
+      noButtonPlaceholder.setAttribute('aria-hidden', 'true');
+      noButtonPlaceholder.style.cssText = `width:${buttonWidth}px;height:${buttonHeight}px;flex:0 0 auto`;
+      noBtn.replaceWith(noButtonPlaceholder);
+      document.body.appendChild(noBtn);
+      noBtn.classList.add('is-dodging');
       noBtn.style.left = `${currentBounds.left}px`;
       noBtn.style.top = `${currentBounds.top}px`;
-      noBtn.classList.add('is-dodging');
+      void noBtn.offsetWidth;
     }
 
     noBtn.style.left = `${destination.left}px`;
     noBtn.style.top = `${destination.top}px`;
     noBtn.style.setProperty('--dodge-angle', `${randomBetween(-10, 10)}deg`);
+    noDodgeCount++;
     const availableMessages = noDodgeMessages.filter((message) => message !== previousDodgeMessage);
     previousDodgeMessage = availableMessages[Math.floor(Math.random() * availableMessages.length)];
-    noBtn.textContent = previousDodgeMessage;
-    noDodgeCount++;
+    noBtn.textContent = noDodgeCount >= maxNoDodges ? 'No' : previousDodgeMessage;
     return true;
   }
+
+  window.addEventListener('resize', () => {
+    if(!noBtn.classList.contains('is-dodging')) return;
+    const bounds = noBtn.getBoundingClientRect();
+    const padding = 12;
+    noBtn.style.left = `${Math.max(padding, Math.min(bounds.left, window.innerWidth - bounds.width - padding))}px`;
+    noBtn.style.top = `${Math.max(padding, Math.min(bounds.top, window.innerHeight - bounds.height - padding))}px`;
+  });
 
   noBtn.addEventListener('pointerenter', (event) => {
     if(event.pointerType !== 'touch' && window.matchMedia('(pointer: fine)').matches){
