@@ -56,30 +56,67 @@
 
   .heart{
     position:absolute;
-    bottom:-10%;
-    font-size: 20px;
-    color: var(--pink-dark);
-    opacity:0.6;
-    animation: floatUp linear infinite;
+    left:0;
+    top:0;
+    opacity:0;
+    pointer-events:none;
     user-select:none;
+    will-change:transform, opacity;
+    animation: particleDrift var(--duration, 8s) ease-out forwards;
   }
 
-  @keyframes floatUp{
-    0%{ transform: translateY(0) rotate(0deg); opacity:0; }
-    10%{ opacity:0.7; }
-    90%{ opacity:0.5; }
-    100%{ transform: translateY(-110vh) rotate(360deg); opacity:0; }
+  .particle-heart{
+    color:var(--pink-dark);
+    text-shadow:0 0 12px rgba(242,154,192,0.65);
+  }
+  .particle-flower{ color:#c47a9d; }
+  .particle-star, .particle-sparkle{ color:#fff; text-shadow:0 0 10px #d391b2; }
+  .particle-glow{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#fff1f8;
+    box-shadow:0 0 14px 5px rgba(242,154,192,0.52);
+  }
+
+  @keyframes particleDrift{
+    0%{ transform:translate3d(0,0,0) rotate(0deg) scale(0.65); opacity:0; }
+    12%{ opacity:var(--peak-opacity,0.55); }
+    82%{ opacity:var(--peak-opacity,0.55); }
+    100%{ transform:translate3d(var(--dx),var(--dy),0) rotate(var(--rotation)) scale(1.1); opacity:0; }
+  }
+
+  @keyframes titleReveal{
+    from{ opacity:0; transform:translateY(12px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  @keyframes envelopeFloat{
+    0%,100%{ translate:0 0; }
+    50%{ translate:0 -7px; }
+  }
+
+  @keyframes cardEnter{
+    from{ opacity:0; transform:translateY(18px) scale(0.95); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+  }
+
+  @keyframes headingReveal{
+    from{ opacity:0; transform:translateY(8px) scale(0.96); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
   }
 
   @keyframes softGlow{
-    0%,100%{ box-shadow:0 8px 20px rgba(242,154,192,0.35); }
+    0%,100%{ box-shadow:0 8px 20px rgba(242,154,192,0.32); }
     50%{ box-shadow:0 10px 28px rgba(242,154,192,0.62); }
   }
 
-  @keyframes sparkleIn{
-    0%{ opacity:0; transform:translateY(8px) scale(0.85); }
-    70%{ opacity:1; transform:translateY(-2px) scale(1.05); }
-    100%{ opacity:1; transform:translateY(0) scale(1); }
+  @keyframes heartBeat{
+    0%,100%{ transform:scale(1); }
+    12%{ transform:scale(1.16); }
+    24%{ transform:scale(1); }
+    36%{ transform:scale(1.12); }
+    48%{ transform:scale(1); }
   }
 
   /* ---------- Burst hearts (on Yes click) ---------- */
@@ -136,7 +173,7 @@
     right:16px;
     background: var(--white);
     border: 2px solid var(--pink-dark);
-    color: var(--pink-dark);
+    color: #9a4f74;
     border-radius: 50%;
     width:46px;
     height:46px;
@@ -150,53 +187,21 @@
     transition: transform 0.2s ease, background 0.2s ease;
   }
   .music-toggle:hover{ transform: scale(1.08); }
-
-  .music-panel{
+  .music-status{
     position:fixed;
-    top:72px;
+    top:70px;
     right:16px;
-    width:min(340px, calc(100vw - 32px));
-    padding:12px;
-    border:1px solid var(--lavender-dark);
-    border-radius:16px;
-    background:var(--white);
-    box-shadow:0 8px 24px rgba(0,0,0,0.14);
+    max-width:min(320px, calc(100vw - 32px));
+    padding:8px 12px;
+    border-radius:12px;
+    background:rgba(255,255,255,0.94);
+    color:var(--text);
+    font-size:12px;
+    line-height:1.45;
+    box-shadow:0 4px 14px rgba(0,0,0,0.1);
     z-index:10;
   }
-  .music-panel[hidden]{ display:none; }
-  .music-panel:not([hidden]){ animation:sparkleIn 0.3s ease-out both; }
-  .music-panel p{
-    margin-bottom:8px;
-    color:var(--text);
-    font-size:14px;
-    font-weight:600;
-  }
-  .track-options{
-    display:grid;
-    gap:8px;
-    margin-bottom:10px;
-  }
-  .track-option{
-    padding:9px 10px;
-    border:1px solid var(--lavender-dark);
-    border-radius:10px;
-    background:var(--white);
-    color:var(--text);
-    font:600 13px 'Quicksand', sans-serif;
-    text-align:left;
-    cursor:pointer;
-  }
-  .track-option[aria-pressed="true"]{
-    border-color:#9a4f74;
-    background:#fff1f7;
-  }
-  .music-panel iframe{
-    display:block;
-    width:100%;
-    height:150px;
-    border:0;
-    border-radius:12px;
-  }
+  .music-status:empty{ display:none; }
 
   /* ---------- Main container ---------- */
   .container{
@@ -219,6 +224,7 @@
     color:#91486f;
     font-size:clamp(30px, 8vw, 40px);
     line-height:1.15;
+    animation:titleReveal 0.8s ease-out both;
   }
 
   .envelope-wrap p.hint{
@@ -232,9 +238,10 @@
     width: 220px;
     height: 150px;
     cursor:pointer;
-    transition: transform 0.25s ease;
+    animation:envelopeFloat 3s ease-in-out infinite;
+    transition:filter 0.25s ease, scale 0.25s ease;
   }
-  .envelope:hover{ transform: translateY(-4px) scale(1.02); }
+  .envelope:hover{ scale:1.04; filter:drop-shadow(0 10px 14px rgba(201,127,168,0.28)); }
 
   .envelope-body{
     position:absolute;
@@ -274,6 +281,39 @@
     color: var(--white);
     z-index:1;
     animation: pulse 1.6s ease-in-out infinite;
+    text-shadow:0 0 12px rgba(255,255,255,0.9), 0 0 22px rgba(242,154,192,0.9);
+    transition:opacity 0.25s ease;
+  }
+  .envelope.open .envelope-heart{ opacity:0; }
+
+  .letter{
+    position:absolute;
+    z-index:2;
+    left:50%;
+    bottom:12px;
+    width:74%;
+    height:62px;
+    padding:10px 8px;
+    border-radius:8px;
+    background:linear-gradient(180deg,#fffdfd,#fff3f8);
+    color:#9a4f74;
+    font:600 15px 'Dancing Script', cursive;
+    box-shadow:0 3px 12px rgba(90,60,90,0.16);
+    opacity:0;
+    transform:translate(-50%,16px) scale(0.94);
+    transition:transform 0.65s cubic-bezier(.2,.8,.2,1) 0.18s, opacity 0.35s ease 0.18s;
+  }
+  .letter::after{
+    content:"";
+    display:block;
+    width:55%;
+    height:1px;
+    margin:8px auto 0;
+    background:#eac8d9;
+  }
+  .envelope.open .letter{
+    opacity:1;
+    transform:translate(-50%,-42px) scale(1);
   }
 
   @keyframes pulse{
@@ -297,7 +337,7 @@
     display:block;
     opacity:1;
     transform: translateY(0) scale(1);
-    animation:sparkleIn 0.5s ease-out both;
+    animation:cardEnter 0.5s ease-out both;
   }
 
   .card h1{
@@ -305,6 +345,11 @@
     color: #9a4f74;
     margin-bottom: 14px;
   }
+  .card.active h1{ animation:headingReveal 0.55s ease-out both; }
+  .card.active > p:not(.question-text){ animation:titleReveal 0.45s ease-out both; }
+  .card.active > p:nth-of-type(2){ animation-delay:0.08s; }
+  .card.active > p:nth-of-type(3){ animation-delay:0.16s; }
+  .card.active > p:nth-of-type(4){ animation-delay:0.24s; }
 
   .card p{
     font-size: 15.5px;
@@ -373,6 +418,13 @@
     transform:translate(var(--dodge-x, 0px), var(--dodge-y, 0px));
     transition:transform 0.18s ease, box-shadow 0.2s ease, background 0.2s ease;
   }
+  .btn-no.is-dodging{
+    position:fixed;
+    z-index:20;
+    transform:rotate(var(--dodge-angle, 0deg));
+    transition:left 0.22s cubic-bezier(.2,.8,.2,1), top 0.22s cubic-bezier(.2,.8,.2,1), transform 0.22s ease;
+  }
+  .choice:disabled{ cursor:default; opacity:0.72; }
   .btn-no:hover{ background: #f3eefc; }
   .btn-no:focus-visible, .btn-yes:focus-visible, .music-toggle:focus-visible{
     outline:3px solid #6f3d5a;
@@ -397,12 +449,7 @@
     display:block;
     animation: popIn 0.6s ease;
   }
-
-  @keyframes popIn{
-    0%{ transform: scale(0); opacity:0; }
-    60%{ transform: scale(1.3); opacity:1; }
-    100%{ transform: scale(1); }
-  }
+  .yes-icon{ animation:heartBeat 1.8s ease-in-out infinite; }
 
   @media (prefers-reduced-motion: reduce){
     *, *::before, *::after{
@@ -411,6 +458,13 @@
       scroll-behavior:auto !important;
       transition-duration:0.01ms !important;
     }
+    .heart{ display:none; }
+  }
+
+  @keyframes popIn{
+    0%{ transform: scale(0); opacity:0; }
+    60%{ transform: scale(1.3); opacity:1; }
+    100%{ transform: scale(1); }
   }
 
   @media (max-width: 480px){
@@ -441,20 +495,9 @@
 <div class="burst-container" id="burstContainer"></div>
 
 <!-- Music toggle -->
-<button class="music-toggle" id="musicToggle" title="Open music player" aria-label="Open Roommates music player" aria-expanded="false" aria-controls="musicPanel">♪</button>
-<div class="music-panel" id="musicPanel" hidden>
-  <p>Autoplay may be blocked by your browser. If needed, tap Play in the player; looping depends on Apple Music player controls.</p>
-  <div class="track-options" aria-label="Choose a song">
-    <button class="track-option" type="button" data-track="risk" aria-pressed="false">Risk It All — Bruno Mars</button>
-    <button class="track-option" type="button" data-track="roommates" aria-pressed="true">Roommates — Malcolm Todd (full song, loop)</button>
-  </div>
-  <iframe
-    id="musicPlayer"
-    title="Roommates by Malcolm Todd on Apple Music"
-    src="https://embed.music.apple.com/us/album/roommates/1703837503?i=1703837703&autoplay=true&loop=true"
-    allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write"
-    loading="eager"></iframe>
-</div>
+<button class="music-toggle" id="musicToggle" type="button" title="Mute music" aria-label="Mute music" aria-pressed="false">♪</button>
+<p class="music-status" id="musicStatus" role="status" aria-live="polite"></p>
+<audio id="backgroundMusic" src="Malcolm%20Todd%20-%20Roommates%20%28Lyrics%29.mp3" loop preload="none"></audio>
 
 <div class="container">
 
@@ -464,6 +507,7 @@
     <p class="hint">Tap the envelope to open it ✨</p>
     <div class="envelope" id="envelope">
       <div class="envelope-body"></div>
+      <div class="letter" aria-hidden="true">A little note for you ♡</div>
       <div class="envelope-flap"></div>
       <div class="envelope-heart">♡</div>
     </div>
@@ -489,6 +533,7 @@
   <div class="card" id="yesCard">
     <span class="yes-icon">💗</span>
     <h1>Thank you! ♡</h1>
+    <p style="font-weight:600;">I'll do my best!</p>
     <p>Thank you for giving me a chance. I'll do my best to make our conversations comfortable, genuine, and enjoyable.</p>
     <p>I look forward to getting to know you!</p>
     <p class="sparkle script">A new little beginning ✨</p>
@@ -506,68 +551,153 @@
 </div>
 
 <script>
-  // ---------- Floating hearts generator ----------
+  // ---------- Full-screen ambient particles ----------
   const heartsContainer = document.getElementById('hearts');
-  const heartSymbols = ['♡','❤','💕','💗'];
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const particleTypes = [
+    {className:'particle-heart', symbols:['♡','❤','💕','💗'], weight:5},
+    {className:'particle-flower', symbols:['✿','❀','🌸'], weight:2},
+    {className:'particle-star', symbols:['✦','✧','★'], weight:2},
+    {className:'particle-sparkle', symbols:['✧','✨','·'], weight:3},
+    {className:'particle-glow', symbols:[''], weight:2}
+  ];
 
-  function createHeart(){
-    const heart = document.createElement('span');
-    heart.classList.add('heart');
-    heart.textContent = heartSymbols[Math.floor(Math.random()*heartSymbols.length)];
-    heart.setAttribute('aria-hidden', 'true');
-    const lane = Math.random();
-    if(lane < 0.4){
-      heart.style.left = (2 + Math.random() * 9) + 'vw';
-    } else if(lane < 0.8){
-      heart.style.left = (89 + Math.random() * 9) + 'vw';
-    } else {
-      heart.style.left = Math.random() * 100 + 'vw';
-    }
-    heart.style.fontSize = (14 + Math.random()*16) + 'px';
-    const duration = 7 + Math.random()*7;
-    heart.style.animationDuration = duration + 's';
-    heartsContainer.appendChild(heart);
-    setTimeout(()=> heart.remove(), duration*1000);
+  function randomBetween(min, max){
+    return min + Math.random() * (max - min);
   }
-  setInterval(createHeart, 420);
-  for(let i=0;i<8;i++) setTimeout(createHeart, i*300);
+
+  function randomOrigin(){
+    const edge = Math.floor(Math.random() * 5);
+    if(edge === 0) return {x:randomBetween(0, 0.12), y:Math.random()};
+    if(edge === 1) return {x:randomBetween(0.88, 1), y:Math.random()};
+    if(edge === 2) return {x:Math.random(), y:randomBetween(0, 0.12)};
+    if(edge === 3) return {x:Math.random(), y:randomBetween(0.88, 1)};
+    return {x:randomBetween(0.18, 0.82), y:randomBetween(0.18, 0.82)};
+  }
+
+  function createParticle(origin = randomOrigin()){
+    if(reducedMotion) return;
+
+    const activeParticles = heartsContainer.children;
+    if(activeParticles.length >= 42) activeParticles[0].remove();
+
+    const choice = Math.random() * particleTypes.reduce((sum, type) => sum + type.weight, 0);
+    let weight = 0;
+    const type = particleTypes.find((item) => {
+      weight += item.weight;
+      return choice < weight;
+    }) || particleTypes[0];
+    const particle = document.createElement('span');
+    const size = Math.random() < 0.08 ? randomBetween(34, 48) : randomBetween(13, 27);
+    const duration = randomBetween(6, 12);
+    const direction = Math.floor(Math.random() * 8);
+    const distance = randomBetween(100, 360);
+    const vectors = [
+      [0,-1], [1,-1], [1,0], [1,1],
+      [0,1], [-1,1], [-1,0], [-1,-1]
+    ];
+    const [vx, vy] = vectors[direction];
+    const dx = (vx * distance) + randomBetween(-70, 70);
+    const dy = (vy * distance) + randomBetween(-70, 70);
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    particle.className = `heart ${type.className}`;
+    particle.textContent = type.symbols[Math.floor(Math.random() * type.symbols.length)];
+    particle.setAttribute('aria-hidden', 'true');
+    particle.style.left = `${origin.x * viewportWidth}px`;
+    particle.style.top = `${origin.y * viewportHeight}px`;
+    particle.style.fontSize = `${size}px`;
+    particle.style.setProperty('--dx', `${dx}px`);
+    particle.style.setProperty('--dy', `${dy}px`);
+    particle.style.setProperty('--duration', `${duration}s`);
+    particle.style.setProperty('--rotation', `${randomBetween(-300, 300)}deg`);
+    particle.style.setProperty('--peak-opacity', `${randomBetween(0.22, 0.58)}`);
+    heartsContainer.appendChild(particle);
+    if(type.className === 'particle-heart' && Math.random() < 0.28){
+      particle.animate(
+        [{scale:'1'}, {scale:'1.16'}, {scale:'1'}],
+        {duration:randomBetween(1400, 2400), iterations:Math.ceil(duration / 2), easing:'ease-in-out'}
+      );
+    }
+    particle.addEventListener('animationend', () => particle.remove(), {once:true});
+  }
+
+  if(!reducedMotion){
+    for(let i=0;i<14;i++) createParticle();
+    window.setInterval(() => {
+      const origin = randomOrigin();
+      createParticle(origin);
+      if(Math.random() < 0.14){
+        const clusterSize = 2 + Math.floor(Math.random() * 3);
+        for(let i=0;i<clusterSize;i++){
+          createParticle({
+            x:Math.min(1, Math.max(0, origin.x + randomBetween(-0.035, 0.035))),
+            y:Math.min(1, Math.max(0, origin.y + randomBetween(-0.035, 0.035)))
+          });
+        }
+      }
+    }, 420);
+  }
 
   // ---------- Music toggle ----------
   const musicBtn = document.getElementById('musicToggle');
-  const musicPanel = document.getElementById('musicPanel');
-  const musicPlayer = document.getElementById('musicPlayer');
-  const trackOptions = document.querySelectorAll('.track-option');
-  const musicTracks = {
-    risk: {
-      title: 'Risk It All by Bruno Mars on Apple Music',
-      src: 'https://embed.music.apple.com/us/album/risk-it-all/1866732792?i=1866732797'
-    },
-    roommates: {
-      title: 'Roommates by Malcolm Todd on Apple Music',
-      src: 'https://embed.music.apple.com/us/album/roommates/1703837503?i=1703837703&autoplay=true&loop=true'
-    }
-  };
-  let selectedTrack = 'roommates';
-  let musicStarted = false;
+  const musicStatus = document.getElementById('musicStatus');
+  const backgroundMusic = document.getElementById('backgroundMusic');
+  let musicFadeTimer = 0;
+  let musicMuted = false;
 
-  musicBtn.addEventListener('click', () => {
-    const isExpanded = musicBtn.getAttribute('aria-expanded') === 'true';
-    musicBtn.setAttribute('aria-expanded', String(!isExpanded));
-    musicPanel.hidden = isExpanded;
+  function updateMusicButton(){
+    musicBtn.textContent = musicMuted || backgroundMusic.paused ? '♪' : '♫';
+    musicBtn.setAttribute('aria-pressed', String(musicMuted || backgroundMusic.paused));
+    musicBtn.setAttribute('aria-label', musicMuted || backgroundMusic.paused ? 'Play music' : 'Mute music');
+    musicBtn.title = musicMuted || backgroundMusic.paused ? 'Play music' : 'Mute music';
+  }
+
+  function fadeMusicTo(targetVolume, pauseWhenSilent = false){
+    window.clearInterval(musicFadeTimer);
+    const initialVolume = backgroundMusic.volume;
+    const startTime = performance.now();
+    const fadeDuration = 700;
+    musicFadeTimer = window.setInterval(() => {
+      const progress = Math.min(1, (performance.now() - startTime) / fadeDuration);
+      backgroundMusic.volume = initialVolume + (targetVolume - initialVolume) * progress;
+      if(progress === 1){
+        window.clearInterval(musicFadeTimer);
+        if(pauseWhenSilent) backgroundMusic.pause();
+        updateMusicButton();
+      }
+    }, 35);
+  }
+
+  async function startMusic(){
+    try{
+      backgroundMusic.volume = 0;
+      await backgroundMusic.play();
+      musicMuted = false;
+      musicStatus.textContent = '';
+      fadeMusicTo(0.38);
+      updateMusicButton();
+    } catch(error){
+      musicStatus.textContent = 'Music could not start. Check that the Roommates MP3 is available, then tap Play to try again.';
+      console.error('Background music playback failed:', error);
+      updateMusicButton();
+    }
+  }
+
+  backgroundMusic.addEventListener('error', () => {
+    musicStatus.textContent = 'Could not load the Roommates MP3. Check that the audio file is available, then reload.';
   });
 
-  trackOptions.forEach((option) => {
-    option.addEventListener('click', () => {
-      const track = musicTracks[option.dataset.track];
-      if(!track) return;
+  musicBtn.addEventListener('click', () => {
+    if(backgroundMusic.paused){
+      startMusic();
+      return;
+    }
 
-      musicPlayer.title = track.title;
-      musicPlayer.src = track.src;
-      selectedTrack = option.dataset.track;
-      trackOptions.forEach((trackOption) => {
-        trackOption.setAttribute('aria-pressed', String(trackOption === option));
-      });
-    });
+    musicMuted = !musicMuted;
+    fadeMusicTo(musicMuted ? 0 : 0.38, musicMuted);
+    updateMusicButton();
   });
 
   // ---------- Typing animation ----------
@@ -604,13 +734,8 @@
   envelope.addEventListener('click', () => {
     if(envelope.classList.contains('open')) return;
     envelope.classList.add('open');
-
-    if(!musicStarted){
-      musicStarted = true;
-      musicPanel.hidden = false;
-      musicBtn.setAttribute('aria-expanded', 'true');
-      musicPlayer.src = musicTracks[selectedTrack].src;
-    }
+    startMusic();
+    launchBurst(18, envelope);
 
     setTimeout(() => {
       envelopeScreen.style.transition = 'opacity 0.4s ease';
@@ -636,57 +761,84 @@
   let noDodgeCount = 0;
   const maxNoDodges = 5;
   const noConfirmations = ['Are you sure?', 'Are you pretty sure?'];
+  const noDodgeMessages = ['No? 🥺', 'Are you sure?', 'Think again! 💗', 'Really? 🥹', 'Pretty please?'];
   let noConfirmationIndex = 0;
+  let previousDodgeMessage = '';
 
-  noBtn.addEventListener('pointerenter', (event) => {
-    if(event.pointerType === 'touch' || !window.matchMedia('(pointer: fine)').matches || noDodgeCount >= maxNoDodges) return;
+  function resetNoButton(){
+    noBtn.classList.remove('is-dodging');
+    ['position','left','top','z-index','--dodge-x','--dodge-y','--dodge-angle'].forEach((property) => {
+      noBtn.style.removeProperty(property);
+    });
+    noBtn.textContent = 'No';
+  }
+
+  function moveNoButton(event){
+    if(noDodgeCount >= maxNoDodges) return false;
 
     const buttonBounds = noBtn.getBoundingClientRect();
-    const currentX = parseFloat(noBtn.style.getPropertyValue('--dodge-x')) || 0;
-    const currentY = parseFloat(noBtn.style.getPropertyValue('--dodge-y')) || 0;
-    const baseLeft = buttonBounds.left - currentX;
-    const baseTop = buttonBounds.top - currentY;
     const buttonWidth = buttonBounds.width;
     const buttonHeight = buttonBounds.height;
-    const cardBounds = questionCard.getBoundingClientRect();
     const padding = 12;
-    const maxLeft = window.innerWidth - buttonWidth - padding;
-    const maxTop = window.innerHeight - buttonHeight - padding;
-    const xPositions = [padding, Math.max(padding, (maxLeft + padding) / 2), maxLeft];
-    const yPositions = [padding, Math.max(padding, (maxTop + padding) / 2), maxTop];
-    const destinations = [];
+    const maxLeft = Math.max(padding, window.innerWidth - buttonWidth - padding);
+    const maxTop = Math.max(padding, window.innerHeight - buttonHeight - padding);
+    const safeTextRects = [...questionCard.querySelectorAll('h1, p, #yesBtn')]
+      .filter((element) => element !== noBtn)
+      .map((element) => element.getBoundingClientRect());
+    const candidates = [];
 
-    for(const left of xPositions){
-      for(const top of yPositions){
-        const buttonCenterX = left + buttonWidth / 2;
-        const buttonCenterY = top + buttonHeight / 2;
-        const outsideCard = buttonCenterX < cardBounds.left
-          || buttonCenterX > cardBounds.right
-          || buttonCenterY < cardBounds.top
-          || buttonCenterY > cardBounds.bottom;
-        const clearOfPointer = event.clientX < left - 12
-          || event.clientX > left + buttonWidth + 12
-          || event.clientY < top - 12
-          || event.clientY > top + buttonHeight + 12;
+    for(let i=0;i<60;i++){
+      const left = randomBetween(padding, maxLeft);
+      const top = randomBetween(padding, maxTop);
+      const candidate = {
+        left,
+        top,
+        right:left + buttonWidth,
+        bottom:top + buttonHeight
+      };
+      const overlapsText = safeTextRects.some((rect) =>
+        candidate.left < rect.right + 10
+        && candidate.right > rect.left - 10
+        && candidate.top < rect.bottom + 10
+        && candidate.bottom > rect.top - 10
+      );
+      const avoidsPointer = Math.hypot(
+        event.clientX - (left + buttonWidth / 2),
+        event.clientY - (top + buttonHeight / 2)
+      ) > Math.max(buttonWidth, buttonHeight) * 1.15;
 
-        if(outsideCard && clearOfPointer){
-          destinations.push({
-            left,
-            top,
-            distance:Math.hypot(event.clientX - buttonCenterX, event.clientY - buttonCenterY)
-          });
-        }
-      }
+      if(!overlapsText && avoidsPointer) candidates.push(candidate);
     }
 
-    destinations.sort((a, b) => b.distance - a.distance);
-    const farthestDestinations = destinations.slice(0, Math.min(3, destinations.length));
-    const destination = farthestDestinations[Math.floor(Math.random() * farthestDestinations.length)];
+    if(candidates.length === 0) return false;
 
-    if(destination){
-      noBtn.style.setProperty('--dodge-x', `${destination.left - baseLeft}px`);
-      noBtn.style.setProperty('--dodge-y', `${destination.top - baseTop}px`);
-      noDodgeCount++;
+    const currentBounds = noBtn.getBoundingClientRect();
+    const destination = candidates[Math.floor(Math.random() * candidates.length)];
+    if(!noBtn.classList.contains('is-dodging')){
+      noBtn.style.left = `${currentBounds.left}px`;
+      noBtn.style.top = `${currentBounds.top}px`;
+      noBtn.classList.add('is-dodging');
+    }
+
+    noBtn.style.left = `${destination.left}px`;
+    noBtn.style.top = `${destination.top}px`;
+    noBtn.style.setProperty('--dodge-angle', `${randomBetween(-10, 10)}deg`);
+    const availableMessages = noDodgeMessages.filter((message) => message !== previousDodgeMessage);
+    previousDodgeMessage = availableMessages[Math.floor(Math.random() * availableMessages.length)];
+    noBtn.textContent = previousDodgeMessage;
+    noDodgeCount++;
+    return true;
+  }
+
+  noBtn.addEventListener('pointerenter', (event) => {
+    if(event.pointerType !== 'touch' && window.matchMedia('(pointer: fine)').matches){
+      moveNoButton(event);
+    }
+  });
+
+  noBtn.addEventListener('pointerdown', (event) => {
+    if(event.pointerType === 'touch' && moveNoButton(event)){
+      event.preventDefault();
     }
   });
 
@@ -700,20 +852,21 @@
   }
 
   // ---------- Heart & confetti burst effect ----------
-  function launchBurst(){
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
+  function launchBurst(totalPieces = 40, origin = null){
+    if(reducedMotion) return;
+
+    const originBounds = origin?.getBoundingClientRect();
+    const centerX = originBounds ? originBounds.left + originBounds.width / 2 : window.innerWidth / 2;
+    const centerY = originBounds ? originBounds.top + originBounds.height / 2 : window.innerHeight / 2;
     const heartEmojis = ['💗','💕','❤','💖','💘','♡'];
     const confettiColors = ['#f29ac0','#cdbbf0','#f8c8dc','#fff2d9','#e6defa'];
-
-    const totalPieces = 40;
 
     for(let i=0; i<totalPieces; i++){
       const isHeart = Math.random() > 0.4;
       const angle = Math.random() * Math.PI * 2;
       const distance = 120 + Math.random() * 220;
       const tx = Math.cos(angle) * distance;
-      const ty = Math.sin(angle) * distance - 80; // slight upward bias
+      const ty = Math.sin(angle) * distance - 80;
       const rot = (Math.random() * 720 - 360) + 'deg';
 
       let el;
@@ -735,27 +888,27 @@
       el.style.setProperty('--ty', ty + 'px');
       el.style.setProperty('--rot', rot);
       el.style.animationDelay = (Math.random() * 0.15) + 's';
-
+      el.addEventListener('animationend', () => el.remove(), {once:true});
       burstContainer.appendChild(el);
-      setTimeout(() => el.remove(), 2000);
     }
   }
 
   yesBtn.addEventListener('click', () => {
-    launchBurst();
+    yesBtn.disabled = true;
+    noBtn.disabled = true;
+    resetNoButton();
+    launchBurst(72);
     switchCard(questionCard, yesCard);
   });
 
   noBtn.addEventListener('click', () => {
-    noBtn.style.removeProperty('--dodge-x');
-    noBtn.style.removeProperty('--dodge-y');
-
     if(noConfirmationIndex < noConfirmations.length){
       noBtn.textContent = noConfirmations[noConfirmationIndex];
       noConfirmationIndex++;
       return;
     }
 
+    resetNoButton();
     switchCard(questionCard, noCard);
   });
 </script>
