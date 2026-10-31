@@ -616,7 +616,12 @@
   const heartsContainer = document.getElementById('hearts');
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const backgroundVideo = document.getElementById('backgroundVideo');
-  if(reducedMotion) backgroundVideo.pause();
+  function startBackgroundVideo(){
+    backgroundVideo.play().catch((error) => {
+      console.warn('Background video playback failed:', error);
+    });
+  }
+  startBackgroundVideo();
   const particleTypes = [
     {className:'particle-heart', symbols:['♡','❤','💕','💗'], weight:5},
     {className:'particle-flower', symbols:['✿','❀','🌸'], weight:2},
@@ -797,6 +802,7 @@
   envelope.addEventListener('click', () => {
     if(envelope.classList.contains('open')) return;
     envelope.classList.add('open');
+    startBackgroundVideo();
     startMusic();
     launchBurst(18, envelope);
 
