@@ -78,6 +78,9 @@
     opacity:0.72;
     filter:saturate(0.9) brightness(1.04);
     pointer-events:none;
+    transform:translateZ(0);
+    backface-visibility:hidden;
+    will-change:transform;
   }
 
   @keyframes dreamscapeDrift{
@@ -369,7 +372,10 @@
 
   /* ---------- Cards (question / yes / no) ---------- */
   .card{
-    background: var(--white);
+    background: rgba(255,255,255,0.78);
+    -webkit-backdrop-filter:blur(14px) saturate(1.15);
+    backdrop-filter:blur(14px) saturate(1.15);
+    border:1px solid rgba(255,255,255,0.72);
     border-radius: 20px;
     padding: 36px 28px;
     box-shadow: 0 15px 40px rgba(150,120,160,0.2);
