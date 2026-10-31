@@ -159,6 +159,25 @@
     font-size:14px;
     font-weight:600;
   }
+  .track-options{
+    display:grid;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .track-option{
+    padding:9px 10px;
+    border:1px solid var(--lavender-dark);
+    border-radius:10px;
+    background:var(--white);
+    color:var(--text);
+    font:600 13px 'Quicksand', sans-serif;
+    text-align:left;
+    cursor:pointer;
+  }
+  .track-option[aria-pressed="true"]{
+    border-color:#9a4f74;
+    background:#fff1f7;
+  }
   .music-panel iframe{
     display:block;
     width:100%;
@@ -306,7 +325,9 @@
     display:flex;
     gap:16px;
     justify-content:center;
+    align-items:center;
     margin-top: 26px;
+    min-height:132px;
     flex-wrap:wrap;
   }
 
@@ -335,7 +356,7 @@
     border: 2px solid var(--lavender-dark) !important;
   }
   .btn-no{
-    transform:translateX(var(--dodge-x, 0px));
+    transform:translate(var(--dodge-x, 0px), var(--dodge-y, 0px));
     transition:transform 0.18s ease, box-shadow 0.2s ease, background 0.2s ease;
   }
   .btn-no:hover{ background: #f3eefc; }
@@ -399,8 +420,12 @@
 <!-- Music toggle -->
 <button class="music-toggle" id="musicToggle" title="Open music player" aria-label="Open Risk It All music player" aria-expanded="false" aria-controls="musicPanel">♪</button>
 <div class="music-panel" id="musicPanel" hidden>
-  <p>Risk It All — Bruno Mars</p>
+  <div class="track-options" aria-label="Choose a song">
+    <button class="track-option" type="button" data-track="risk" aria-pressed="true">Risk It All — Bruno Mars</button>
+    <button class="track-option" type="button" data-track="roommates" aria-pressed="false">Roommates — Malcolm Todd (0:34)</button>
+  </div>
   <iframe
+    id="musicPlayer"
     title="Risk It All by Bruno Mars on Apple Music"
     src="https://embed.music.apple.com/us/album/risk-it-all/1866732792?i=1866732797"
     allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write"
@@ -478,11 +503,36 @@
   // ---------- Music toggle ----------
   const musicBtn = document.getElementById('musicToggle');
   const musicPanel = document.getElementById('musicPanel');
+  const musicPlayer = document.getElementById('musicPlayer');
+  const trackOptions = document.querySelectorAll('.track-option');
+  const musicTracks = {
+    risk: {
+      title: 'Risk It All by Bruno Mars on Apple Music',
+      src: 'https://embed.music.apple.com/us/album/risk-it-all/1866732792?i=1866732797'
+    },
+    roommates: {
+      title: 'Roommates by Malcolm Todd on Apple Music, starting at 34 seconds',
+      src: 'https://embed.music.apple.com/us/album/roommates/1703837503?i=1703837703&start=34'
+    }
+  };
 
   musicBtn.addEventListener('click', () => {
     const isExpanded = musicBtn.getAttribute('aria-expanded') === 'true';
     musicBtn.setAttribute('aria-expanded', String(!isExpanded));
     musicPanel.hidden = isExpanded;
+  });
+
+  trackOptions.forEach((option) => {
+    option.addEventListener('click', () => {
+      const track = musicTracks[option.dataset.track];
+      if(!track) return;
+
+      musicPlayer.title = track.title;
+      musicPlayer.src = track.src;
+      trackOptions.forEach((trackOption) => {
+        trackOption.setAttribute('aria-pressed', String(trackOption === option));
+      });
+    });
   });
 
   // ---------- Typing animation ----------
@@ -541,14 +591,51 @@
   const yesCard = document.getElementById('yesCard');
   const noCard = document.getElementById('noCard');
   const burstContainer = document.getElementById('burstContainer');
-  let noButtonDirection = 1;
+  const buttonsContainer = noBtn.parentElement;
+  let noDodgeCount = 0;
+  const maxNoDodges = 3;
   const noConfirmations = ['Are you sure?', 'Are you pretty sure?'];
   let noConfirmationIndex = 0;
 
   noBtn.addEventListener('pointerenter', (event) => {
-    if(event.pointerType === 'touch' || !window.matchMedia('(pointer: fine)').matches) return;
-    noButtonDirection *= -1;
-    noBtn.style.setProperty('--dodge-x', `${noButtonDirection * 44}px`);
+    if(event.pointerType === 'touch' || !window.matchMedia('(pointer: fine)').matches || noDodgeCount >= maxNoDodges) return;
+
+    const directions = [
+      [-1, -1], [0, -1], [1, -1],
+      [-1, 0],              [1, 0],
+      [-1, 1],  [0, 1],  [1, 1]
+    ].sort(() => Math.random() - 0.5);
+    const bounds = buttonsContainer.getBoundingClientRect();
+    const buttonBounds = noBtn.getBoundingClientRect();
+    const currentX = parseFloat(noBtn.style.getPropertyValue('--dodge-x')) || 0;
+    const currentY = parseFloat(noBtn.style.getPropertyValue('--dodge-y')) || 0;
+    const baseLeft = buttonBounds.left - currentX;
+    const baseTop = buttonBounds.top - currentY;
+    const buttonWidth = buttonBounds.width;
+    const buttonHeight = buttonBounds.height;
+    const padding = 8;
+
+    for(const [directionX, directionY] of directions){
+      const targetX = currentX + directionX * (48 + Math.random() * 32);
+      const targetY = currentY + directionY * (30 + Math.random() * 24);
+      const targetLeft = baseLeft + targetX;
+      const targetTop = baseTop + targetY;
+      const withinBounds = targetLeft >= bounds.left + padding
+        && targetTop >= bounds.top + padding
+        && targetLeft + buttonWidth <= bounds.right - padding
+        && targetTop + buttonHeight <= bounds.bottom - padding;
+      const pointerClear = event.clientX < targetLeft - 12
+        || event.clientX > targetLeft + buttonWidth + 12
+        || event.clientY < targetTop - 12
+        || event.clientY > targetTop + buttonHeight + 12;
+
+      if(withinBounds && pointerClear){
+        noBtn.style.setProperty('--dodge-x', `${targetX}px`);
+        noBtn.style.setProperty('--dodge-y', `${targetY}px`);
+        noDodgeCount++;
+        break;
+      }
+    }
   });
 
   function switchCard(hideCard, showCard){
@@ -608,6 +695,9 @@
   });
 
   noBtn.addEventListener('click', () => {
+    noBtn.style.removeProperty('--dodge-x');
+    noBtn.style.removeProperty('--dodge-y');
+
     if(noConfirmationIndex < noConfirmations.length){
       noBtn.textContent = noConfirmations[noConfirmationIndex];
       noConfirmationIndex++;
