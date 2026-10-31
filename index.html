@@ -32,6 +32,7 @@
     background: linear-gradient(135deg, var(--cream), var(--lavender) 50%, var(--pink) 100%);
     color: var(--text);
     min-height:100vh;
+    min-height:100svh;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -139,6 +140,33 @@
   }
   .music-toggle:hover{ transform: scale(1.08); }
 
+  .music-panel{
+    position:fixed;
+    top:72px;
+    right:16px;
+    width:min(340px, calc(100vw - 32px));
+    padding:12px;
+    border:1px solid var(--lavender-dark);
+    border-radius:16px;
+    background:var(--white);
+    box-shadow:0 8px 24px rgba(0,0,0,0.14);
+    z-index:10;
+  }
+  .music-panel[hidden]{ display:none; }
+  .music-panel p{
+    margin-bottom:8px;
+    color:var(--text);
+    font-size:14px;
+    font-weight:600;
+  }
+  .music-panel iframe{
+    display:block;
+    width:100%;
+    height:150px;
+    border:0;
+    border-radius:12px;
+  }
+
   /* ---------- Main container ---------- */
   .container{
     position:relative;
@@ -153,12 +181,19 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:24px;
+    gap:16px;
+  }
+
+  .opening-title{
+    color:#91486f;
+    font-size:clamp(30px, 8vw, 40px);
+    line-height:1.15;
   }
 
   .envelope-wrap p.hint{
     font-size:15px;
-    opacity:0.75;
+    color:#49364a;
+    font-weight:600;
   }
 
   .envelope{
@@ -186,13 +221,13 @@
     top:0;
     left:0;
     width:100%;
-    height:0;
-    border-left: 110px solid transparent;
-    border-right: 110px solid transparent;
-    border-top: 90px solid var(--pink-dark);
+    height:90px;
+    background:var(--pink-dark);
+    clip-path:polygon(0 0, 100% 0, 50% 100%);
     transform-origin: top;
     transition: transform 0.7s cubic-bezier(.68,-0.55,.27,1.55);
     z-index:3;
+    backface-visibility:hidden;
   }
 
   .envelope.open .envelope-flap{
@@ -215,27 +250,6 @@
     50%{ transform: translate(-50%,-50%) scale(1.15); }
   }
 
-  .letter{
-    position:absolute;
-    bottom:6px;
-    left:50%;
-    width: 85%;
-    height: 10px;
-    background: var(--white);
-    border-radius: 6px;
-    transform: translate(-50%, 0) scale(0.9);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    z-index:2;
-    opacity:0;
-    transition: all 0.6s ease 0.3s;
-  }
-
-  .envelope.open .letter{
-    height: 140px;
-    bottom: 70px;
-    opacity:1;
-  }
-
   /* ---------- Cards (question / yes / no) ---------- */
   .card{
     background: var(--white);
@@ -256,7 +270,7 @@
 
   .card h1{
     font-size: 34px;
-    color: var(--pink-dark);
+    color: #9a4f74;
     margin-bottom: 14px;
   }
 
@@ -271,7 +285,7 @@
     font-size: 19px;
     font-weight:600;
     margin: 18px 0 8px;
-    color: #7a5c7a;
+    color: #563a56;
     min-height: 28px;
   }
 
@@ -309,8 +323,8 @@
   }
 
   .btn-yes{
-    background: linear-gradient(135deg, var(--pink-dark), var(--pink));
-    color: white;
+    background: linear-gradient(135deg, #f29ac0, #f8c8dc);
+    color: #53253c;
     box-shadow: 0 8px 20px rgba(242,154,192,0.45);
   }
   .btn-yes:hover{ transform: translateY(-3px); box-shadow: 0 12px 25px rgba(242,154,192,0.55);}
@@ -320,12 +334,20 @@
     color: var(--text);
     border: 2px solid var(--lavender-dark) !important;
   }
-  .btn-no:hover{ transform: translateY(-3px); background: #f3eefc; }
+  .btn-no{
+    transform:translateX(var(--dodge-x, 0px));
+    transition:transform 0.18s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  .btn-no:hover{ background: #f3eefc; }
+  .btn-no:focus-visible, .btn-yes:focus-visible, .music-toggle:focus-visible{
+    outline:3px solid #6f3d5a;
+    outline-offset:3px;
+  }
 
   .footnote{
     margin-top: 22px;
     font-size: 13px;
-    opacity:0.65;
+    opacity:0.9;
   }
 
   .sparkle{
@@ -350,7 +372,19 @@
   @media (max-width: 480px){
     .card{ padding: 28px 20px; }
     .card h1{ font-size: 28px; }
-    .envelope{ width: 190px; height: 130px; }
+    .envelope{ width: 190px; height: 140px; }
+    .envelope-body{ height:110px; }
+    .envelope-flap{ height:78px; }
+    .envelope-wrap{ gap:14px; }
+  }
+
+  @media (max-height: 480px){
+    body{ padding:8px; }
+    .opening-title{ font-size:clamp(24px, 7vw, 32px); }
+    .envelope-wrap{ gap:8px; }
+    .envelope{ width:min(190px, 60vw); height:100px; }
+    .envelope-body{ height:78px; }
+    .envelope-flap{ height:58px; }
   }
 </style>
 </head>
@@ -363,20 +397,24 @@
 <div class="burst-container" id="burstContainer"></div>
 
 <!-- Music toggle -->
-<button class="music-toggle" id="musicToggle" title="Play romantic music">♪</button>
-<audio id="bgMusic" loop>
-  <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_1b327e9c3f.mp3" type="audio/mpeg">
-</audio>
+<button class="music-toggle" id="musicToggle" title="Open music player" aria-label="Open Risk It All music player" aria-expanded="false" aria-controls="musicPanel">♪</button>
+<div class="music-panel" id="musicPanel" hidden>
+  <p>Risk It All — Bruno Mars</p>
+  <iframe
+    title="Risk It All by Bruno Mars on Apple Music"
+    src="https://embed.music.apple.com/us/album/risk-it-all/1866732792?i=1866732797"
+    allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write"
+    loading="lazy"></iframe>
+</div>
 
 <div class="container">
 
   <!-- ENVELOPE / OPENING SCREEN -->
   <div class="envelope-wrap" id="envelopeScreen">
-    <h1 class="script" style="font-size:40px; color:#c97fa8;">A Little Question for You ♡</h1>
+    <h1 class="script opening-title">A Little Question for You ♡</h1>
     <p class="hint">Tap the envelope to open it ✨</p>
     <div class="envelope" id="envelope">
       <div class="envelope-body"></div>
-      <div class="letter"></div>
       <div class="envelope-flap"></div>
       <div class="envelope-heart">♡</div>
     </div>
@@ -439,20 +477,12 @@
 
   // ---------- Music toggle ----------
   const musicBtn = document.getElementById('musicToggle');
-  const bgMusic = document.getElementById('bgMusic');
-  let playing = false;
+  const musicPanel = document.getElementById('musicPanel');
 
   musicBtn.addEventListener('click', () => {
-    if(!playing){
-      bgMusic.volume = 0.4;
-      bgMusic.play().catch(()=>{});
-      musicBtn.textContent = '🔊';
-      playing = true;
-    } else {
-      bgMusic.pause();
-      musicBtn.textContent = '♪';
-      playing = false;
-    }
+    const isExpanded = musicBtn.getAttribute('aria-expanded') === 'true';
+    musicBtn.setAttribute('aria-expanded', String(!isExpanded));
+    musicPanel.hidden = isExpanded;
   });
 
   // ---------- Typing animation ----------
@@ -511,6 +541,13 @@
   const yesCard = document.getElementById('yesCard');
   const noCard = document.getElementById('noCard');
   const burstContainer = document.getElementById('burstContainer');
+  let noButtonDirection = 1;
+
+  noBtn.addEventListener('pointerenter', (event) => {
+    if(event.pointerType === 'touch' || !window.matchMedia('(pointer: fine)').matches) return;
+    noButtonDirection *= -1;
+    noBtn.style.setProperty('--dodge-x', `${noButtonDirection * 44}px`);
+  });
 
   function switchCard(hideCard, showCard){
     hideCard.classList.remove('active');
