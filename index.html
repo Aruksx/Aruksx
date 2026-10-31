@@ -822,8 +822,6 @@
   const yesCard = document.getElementById('yesCard');
   const noCard = document.getElementById('noCard');
   const burstContainer = document.getElementById('burstContainer');
-  let noDodgeCount = 0;
-  const maxNoDodges = 5;
   const noConfirmations = ['Are you sure?', 'Are you pretty sure?'];
   const noDodgeMessages = ['No? 🥺', 'Are you sure?', 'Think again! 💗', 'Really? 🥹', 'Pretty please?'];
   let noConfirmationIndex = 0;
@@ -843,8 +841,6 @@
   }
 
   function moveNoButton(event){
-    if(noDodgeCount >= maxNoDodges) return false;
-
     const buttonBounds = noBtn.getBoundingClientRect();
     const buttonWidth = buttonBounds.width;
     const buttonHeight = buttonBounds.height;
@@ -879,10 +875,13 @@
       if(!overlapsText && avoidsPointer) candidates.push(candidate);
     }
 
-    if(candidates.length === 0) return false;
-
     const currentBounds = noBtn.getBoundingClientRect();
-    const destination = candidates[Math.floor(Math.random() * candidates.length)];
+    const destination = candidates.length
+      ? candidates[Math.floor(Math.random() * candidates.length)]
+      : {
+          left:event.clientX < window.innerWidth / 2 ? maxLeft : padding,
+          top:event.clientY < window.innerHeight / 2 ? maxTop : padding
+        };
     if(!noBtn.classList.contains('is-dodging')){
       noButtonPlaceholder = document.createElement('span');
       noButtonPlaceholder.setAttribute('aria-hidden', 'true');
@@ -898,10 +897,9 @@
     noBtn.style.left = `${destination.left}px`;
     noBtn.style.top = `${destination.top}px`;
     noBtn.style.setProperty('--dodge-angle', `${randomBetween(-10, 10)}deg`);
-    noDodgeCount++;
     const availableMessages = noDodgeMessages.filter((message) => message !== previousDodgeMessage);
     previousDodgeMessage = availableMessages[Math.floor(Math.random() * availableMessages.length)];
-    noBtn.textContent = noDodgeCount >= maxNoDodges ? 'No' : previousDodgeMessage;
+    noBtn.textContent = previousDodgeMessage;
     return true;
   }
 
