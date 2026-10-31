@@ -430,7 +430,7 @@
 
     <div class="buttons">
       <button class="choice btn-yes" id="yesBtn">♡ Yes</button>
-      <button class="choice btn-no" id="noBtn">No</button>
+      <button class="choice btn-no" id="noBtn" aria-live="polite">No</button>
     </div>
 
     <p class="footnote">No pressure. Whatever your answer is, I'll respect it.</p>
@@ -542,6 +542,8 @@
   const noCard = document.getElementById('noCard');
   const burstContainer = document.getElementById('burstContainer');
   let noButtonDirection = 1;
+  const noConfirmations = ['Are you sure?', 'Are you pretty sure?'];
+  let noConfirmationIndex = 0;
 
   noBtn.addEventListener('pointerenter', (event) => {
     if(event.pointerType === 'touch' || !window.matchMedia('(pointer: fine)').matches) return;
@@ -605,7 +607,15 @@
     switchCard(questionCard, yesCard);
   });
 
-  noBtn.addEventListener('click', () => switchCard(questionCard, noCard));
+  noBtn.addEventListener('click', () => {
+    if(noConfirmationIndex < noConfirmations.length){
+      noBtn.textContent = noConfirmations[noConfirmationIndex];
+      noConfirmationIndex++;
+      return;
+    }
+
+    switchCard(questionCard, noCard);
+  });
 </script>
 
 </body>
