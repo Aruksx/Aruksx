@@ -441,18 +441,19 @@
 <div class="burst-container" id="burstContainer"></div>
 
 <!-- Music toggle -->
-<button class="music-toggle" id="musicToggle" title="Open music player" aria-label="Open Risk It All music player" aria-expanded="false" aria-controls="musicPanel">♪</button>
+<button class="music-toggle" id="musicToggle" title="Open music player" aria-label="Open Roommates music player" aria-expanded="false" aria-controls="musicPanel">♪</button>
 <div class="music-panel" id="musicPanel" hidden>
+  <p>Autoplay may be blocked by your browser. If needed, tap Play in the player; looping depends on Apple Music player controls.</p>
   <div class="track-options" aria-label="Choose a song">
-    <button class="track-option" type="button" data-track="risk" aria-pressed="true">Risk It All — Bruno Mars</button>
-    <button class="track-option" type="button" data-track="roommates" aria-pressed="false">Roommates — Malcolm Todd (0:34)</button>
+    <button class="track-option" type="button" data-track="risk" aria-pressed="false">Risk It All — Bruno Mars</button>
+    <button class="track-option" type="button" data-track="roommates" aria-pressed="true">Roommates — Malcolm Todd (full song, loop)</button>
   </div>
   <iframe
     id="musicPlayer"
-    title="Risk It All by Bruno Mars on Apple Music"
-    src="https://embed.music.apple.com/us/album/risk-it-all/1866732792?i=1866732797"
+    title="Roommates by Malcolm Todd on Apple Music"
+    src="https://embed.music.apple.com/us/album/roommates/1703837503?i=1703837703&autoplay=true&loop=true"
     allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write"
-    loading="lazy"></iframe>
+    loading="eager"></iframe>
 </div>
 
 <div class="container">
@@ -513,14 +514,22 @@
     const heart = document.createElement('span');
     heart.classList.add('heart');
     heart.textContent = heartSymbols[Math.floor(Math.random()*heartSymbols.length)];
-    heart.style.left = Math.random()*100 + 'vw';
+    heart.setAttribute('aria-hidden', 'true');
+    const lane = Math.random();
+    if(lane < 0.4){
+      heart.style.left = (2 + Math.random() * 9) + 'vw';
+    } else if(lane < 0.8){
+      heart.style.left = (89 + Math.random() * 9) + 'vw';
+    } else {
+      heart.style.left = Math.random() * 100 + 'vw';
+    }
     heart.style.fontSize = (14 + Math.random()*16) + 'px';
-    const duration = 6 + Math.random()*6;
+    const duration = 7 + Math.random()*7;
     heart.style.animationDuration = duration + 's';
     heartsContainer.appendChild(heart);
     setTimeout(()=> heart.remove(), duration*1000);
   }
-  setInterval(createHeart, 600);
+  setInterval(createHeart, 420);
   for(let i=0;i<8;i++) setTimeout(createHeart, i*300);
 
   // ---------- Music toggle ----------
@@ -534,10 +543,12 @@
       src: 'https://embed.music.apple.com/us/album/risk-it-all/1866732792?i=1866732797'
     },
     roommates: {
-      title: 'Roommates by Malcolm Todd on Apple Music, starting at 34 seconds',
-      src: 'https://embed.music.apple.com/us/album/roommates/1703837503?i=1703837703&start=34'
+      title: 'Roommates by Malcolm Todd on Apple Music',
+      src: 'https://embed.music.apple.com/us/album/roommates/1703837503?i=1703837703&autoplay=true&loop=true'
     }
   };
+  let selectedTrack = 'roommates';
+  let musicStarted = false;
 
   musicBtn.addEventListener('click', () => {
     const isExpanded = musicBtn.getAttribute('aria-expanded') === 'true';
@@ -552,6 +563,7 @@
 
       musicPlayer.title = track.title;
       musicPlayer.src = track.src;
+      selectedTrack = option.dataset.track;
       trackOptions.forEach((trackOption) => {
         trackOption.setAttribute('aria-pressed', String(trackOption === option));
       });
@@ -592,6 +604,13 @@
   envelope.addEventListener('click', () => {
     if(envelope.classList.contains('open')) return;
     envelope.classList.add('open');
+
+    if(!musicStarted){
+      musicStarted = true;
+      musicPanel.hidden = false;
+      musicBtn.setAttribute('aria-expanded', 'true');
+      musicPlayer.src = musicTracks[selectedTrack].src;
+    }
 
     setTimeout(() => {
       envelopeScreen.style.transition = 'opacity 0.4s ease';
