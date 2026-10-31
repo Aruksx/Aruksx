@@ -44,6 +44,40 @@
     font-family:'Dancing Script', cursive;
   }
 
+  .dreamscape{
+    position:fixed;
+    inset:-5%;
+    z-index:0;
+    pointer-events:none;
+    opacity:0.52;
+    background:
+      linear-gradient(135deg, rgba(255,248,250,0.2), rgba(250,243,255,0.16)),
+      url("assets/heart-dreamscape.png") center / cover no-repeat;
+    transform:scale(1.04);
+    animation:dreamscapeDrift 36s ease-in-out infinite;
+    will-change:transform;
+  }
+
+  .dreamscape::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(ellipse at 18% 24%, rgba(255,255,255,0.3), transparent 44%),
+      radial-gradient(ellipse at 82% 76%, rgba(220,198,255,0.24), transparent 46%);
+    animation:dreamscapeGlow 9s ease-in-out infinite alternate;
+  }
+
+  @keyframes dreamscapeDrift{
+    0%,100%{ transform:scale(1.04) translate3d(-0.5%,0.35%,0); }
+    50%{ transform:scale(1.1) translate3d(0.5%,-0.35%,0); }
+  }
+
+  @keyframes dreamscapeGlow{
+    from{ opacity:0.55; }
+    to{ opacity:1; }
+  }
+
   /* ---------- Floating hearts background ---------- */
   .hearts{
     position:fixed;
@@ -51,7 +85,7 @@
     width:100%; height:100%;
     overflow:hidden;
     pointer-events:none;
-    z-index:0;
+    z-index:1;
   }
 
   .heart{
@@ -459,6 +493,10 @@
       transition-duration:0.01ms !important;
     }
     .heart{ display:none; }
+    .dreamscape, .dreamscape::after{
+      animation:none !important;
+      transform:none !important;
+    }
   }
 
   @keyframes popIn{
@@ -487,6 +525,8 @@
 </style>
 </head>
 <body>
+
+<div class="dreamscape" aria-hidden="true"></div>
 
 <!-- Floating hearts -->
 <div class="hearts" id="hearts"></div>
