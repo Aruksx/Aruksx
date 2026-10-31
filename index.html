@@ -71,6 +71,17 @@
     100%{ transform: translateY(-110vh) rotate(360deg); opacity:0; }
   }
 
+  @keyframes softGlow{
+    0%,100%{ box-shadow:0 8px 20px rgba(242,154,192,0.35); }
+    50%{ box-shadow:0 10px 28px rgba(242,154,192,0.62); }
+  }
+
+  @keyframes sparkleIn{
+    0%{ opacity:0; transform:translateY(8px) scale(0.85); }
+    70%{ opacity:1; transform:translateY(-2px) scale(1.05); }
+    100%{ opacity:1; transform:translateY(0) scale(1); }
+  }
+
   /* ---------- Burst hearts (on Yes click) ---------- */
   .burst-container{
     position:fixed;
@@ -153,6 +164,7 @@
     z-index:10;
   }
   .music-panel[hidden]{ display:none; }
+  .music-panel:not([hidden]){ animation:sparkleIn 0.3s ease-out both; }
   .music-panel p{
     margin-bottom:8px;
     color:var(--text);
@@ -285,6 +297,7 @@
     display:block;
     opacity:1;
     transform: translateY(0) scale(1);
+    animation:sparkleIn 0.5s ease-out both;
   }
 
   .card h1{
@@ -347,6 +360,7 @@
     background: linear-gradient(135deg, #f29ac0, #f8c8dc);
     color: #53253c;
     box-shadow: 0 8px 20px rgba(242,154,192,0.45);
+    animation:softGlow 2.8s ease-in-out infinite;
   }
   .btn-yes:hover{ transform: translateY(-3px); box-shadow: 0 12px 25px rgba(242,154,192,0.55);}
 
@@ -388,6 +402,15 @@
     0%{ transform: scale(0); opacity:0; }
     60%{ transform: scale(1.3); opacity:1; }
     100%{ transform: scale(1); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+      animation-duration:0.01ms !important;
+      animation-iteration-count:1 !important;
+      scroll-behavior:auto !important;
+      transition-duration:0.01ms !important;
+    }
   }
 
   @media (max-width: 480px){
@@ -591,21 +614,14 @@
   const yesCard = document.getElementById('yesCard');
   const noCard = document.getElementById('noCard');
   const burstContainer = document.getElementById('burstContainer');
-  const buttonsContainer = noBtn.parentElement;
   let noDodgeCount = 0;
-  const maxNoDodges = 3;
+  const maxNoDodges = 5;
   const noConfirmations = ['Are you sure?', 'Are you pretty sure?'];
   let noConfirmationIndex = 0;
 
   noBtn.addEventListener('pointerenter', (event) => {
     if(event.pointerType === 'touch' || !window.matchMedia('(pointer: fine)').matches || noDodgeCount >= maxNoDodges) return;
 
-    const directions = [
-      [-1, -1], [0, -1], [1, -1],
-      [-1, 0],              [1, 0],
-      [-1, 1],  [0, 1],  [1, 1]
-    ].sort(() => Math.random() - 0.5);
-    const bounds = buttonsContainer.getBoundingClientRect();
     const buttonBounds = noBtn.getBoundingClientRect();
     const currentX = parseFloat(noBtn.style.getPropertyValue('--dodge-x')) || 0;
     const currentY = parseFloat(noBtn.style.getPropertyValue('--dodge-y')) || 0;
@@ -613,28 +629,45 @@
     const baseTop = buttonBounds.top - currentY;
     const buttonWidth = buttonBounds.width;
     const buttonHeight = buttonBounds.height;
-    const padding = 8;
+    const cardBounds = questionCard.getBoundingClientRect();
+    const padding = 12;
+    const maxLeft = window.innerWidth - buttonWidth - padding;
+    const maxTop = window.innerHeight - buttonHeight - padding;
+    const xPositions = [padding, Math.max(padding, (maxLeft + padding) / 2), maxLeft];
+    const yPositions = [padding, Math.max(padding, (maxTop + padding) / 2), maxTop];
+    const destinations = [];
 
-    for(const [directionX, directionY] of directions){
-      const targetX = currentX + directionX * (48 + Math.random() * 32);
-      const targetY = currentY + directionY * (30 + Math.random() * 24);
-      const targetLeft = baseLeft + targetX;
-      const targetTop = baseTop + targetY;
-      const withinBounds = targetLeft >= bounds.left + padding
-        && targetTop >= bounds.top + padding
-        && targetLeft + buttonWidth <= bounds.right - padding
-        && targetTop + buttonHeight <= bounds.bottom - padding;
-      const pointerClear = event.clientX < targetLeft - 12
-        || event.clientX > targetLeft + buttonWidth + 12
-        || event.clientY < targetTop - 12
-        || event.clientY > targetTop + buttonHeight + 12;
+    for(const left of xPositions){
+      for(const top of yPositions){
+        const buttonCenterX = left + buttonWidth / 2;
+        const buttonCenterY = top + buttonHeight / 2;
+        const outsideCard = buttonCenterX < cardBounds.left
+          || buttonCenterX > cardBounds.right
+          || buttonCenterY < cardBounds.top
+          || buttonCenterY > cardBounds.bottom;
+        const clearOfPointer = event.clientX < left - 12
+          || event.clientX > left + buttonWidth + 12
+          || event.clientY < top - 12
+          || event.clientY > top + buttonHeight + 12;
 
-      if(withinBounds && pointerClear){
-        noBtn.style.setProperty('--dodge-x', `${targetX}px`);
-        noBtn.style.setProperty('--dodge-y', `${targetY}px`);
-        noDodgeCount++;
-        break;
+        if(outsideCard && clearOfPointer){
+          destinations.push({
+            left,
+            top,
+            distance:Math.hypot(event.clientX - buttonCenterX, event.clientY - buttonCenterY)
+          });
+        }
       }
+    }
+
+    destinations.sort((a, b) => b.distance - a.distance);
+    const farthestDestinations = destinations.slice(0, Math.min(3, destinations.length));
+    const destination = farthestDestinations[Math.floor(Math.random() * farthestDestinations.length)];
+
+    if(destination){
+      noBtn.style.setProperty('--dodge-x', `${destination.left - baseLeft}px`);
+      noBtn.style.setProperty('--dodge-y', `${destination.top - baseTop}px`);
+      noDodgeCount++;
     }
   });
 
