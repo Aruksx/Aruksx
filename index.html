@@ -823,10 +823,50 @@
   const noCard = document.getElementById('noCard');
   const burstContainer = document.getElementById('burstContainer');
   const noConfirmations = ['Are you sure?', 'Are you pretty sure?'];
-  const noDodgeMessages = ['No? 🥺', 'Are you sure?', 'Think again! 💗', 'Really? 🥹', 'Pretty please?'];
+  const noDodgeMessages = [
+    'No? 🥺',
+    'Are you sure?',
+    'Think again! 💗',
+    'Really? 🥹',
+    'Pretty please?',
+    'Not so fast! 💨',
+    'You almost got me!',
+    'Wait, reconsider?',
+    'Maybe another time?',
+    'Nice try! 😉',
+    'Missed me! 💕',
+    'Catch me if you can!',
+    'One more thought?',
+    'Oops, too slow!',
+    'Still thinking? ♡',
+    'Maybe think twice?',
+    'Over here! ✨',
+    'That was close!',
+    'Try your luck again?',
+    'You sure about that?'
+  ];
   let noConfirmationIndex = 0;
   let previousDodgeMessage = '';
+  let remainingDodgeMessages = [];
   let noButtonPlaceholder = null;
+
+  function nextDodgeMessage(){
+    if(remainingDodgeMessages.length === 0){
+      remainingDodgeMessages = [...noDodgeMessages];
+      for(let i=remainingDodgeMessages.length - 1;i>0;i--){
+        const index = Math.floor(Math.random() * (i + 1));
+        [remainingDodgeMessages[i], remainingDodgeMessages[index]] =
+          [remainingDodgeMessages[index], remainingDodgeMessages[i]];
+      }
+      if(remainingDodgeMessages[0] === previousDodgeMessage){
+        [remainingDodgeMessages[0], remainingDodgeMessages[1]] =
+          [remainingDodgeMessages[1], remainingDodgeMessages[0]];
+      }
+    }
+
+    previousDodgeMessage = remainingDodgeMessages.shift();
+    return previousDodgeMessage;
+  }
 
   function resetNoButton(){
     if(noButtonPlaceholder?.isConnected){
@@ -897,9 +937,7 @@
     noBtn.style.left = `${destination.left}px`;
     noBtn.style.top = `${destination.top}px`;
     noBtn.style.setProperty('--dodge-angle', `${randomBetween(-10, 10)}deg`);
-    const availableMessages = noDodgeMessages.filter((message) => message !== previousDodgeMessage);
-    previousDodgeMessage = availableMessages[Math.floor(Math.random() * availableMessages.length)];
-    noBtn.textContent = previousDodgeMessage;
+    noBtn.textContent = nextDodgeMessage();
     return true;
   }
 
