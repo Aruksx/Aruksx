@@ -1,0 +1,377 @@
+/**
+ * ============================================================================
+ * CLASSROOM PROJECTOR MODE
+ * ----------------------------------------------------------------------------
+ * Click any card (objective, citizenship, cultural marker) and it expands into
+ * a giant full-screen "projection" slide so the whole class can see it on a
+ * projector:
+ *
+ *   - Title decodes with the hacker-style scramble animation
+ *   - Body words rise in with a staggered 3D kinetic reveal
+ *   - The slide follows the mouse with a smooth 3D tilt
+ *   - ← / → flip through the other cards in the same group (3D carousel)
+ *   - F toggles true browser fullscreen (for the actual projector)
+ *   - ESC or a click on the dark backdrop exits
+ *
+ * Interactive rows/chips (Kapwa levels, trait chips) keep their normal click
+ * behavior and expose a small "⤢" present-btn that projects them instead.
+ * ============================================================================
+ */
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------- elements
+  let overlay, stage, slide, elTag, elIcon, elTitle, elBody,
+      elFootSection, elIndex, prevBtn, nextBtn, closeBtn, fsBtn, dotsEl;
+
+  let isOpen = false;
+  let group = [];            // [{ el, data }] — the cards visible in one view
+  let index = 0;
+  let transitionLock = false;
+
+  // 3D mouse-tilt state (target vs. lerped current)
+  let tX = 0, tY = 0, cX = 0, cY = 0;
+  let tiltRaf = null;
+
+  // ---------------------------------------------------------------- helpers
+  function collapse(s) {
+    return (s || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function esc(s) {
+    return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function sectionTag(el) {
+    const sec = el.closest('.module-section');
+    if (!sec) return 'GROUP 8';
+    const wm = sec.querySelector('.section-ghost-watermark');
+    if (wm && wm.textContent.trim()) return wm.textContent.trim().toUpperCase();
+    const tl = sec.querySelector('.section-tagline');
+    if (tl && tl.textContent.trim()) return tl.textContent.trim().toUpperCase();
+    return 'GROUP 8';
+  }
+
+  function kindOf(el) {
+    if (!el) return null;
+    if (el.classList.contains('tilt-card')) return 'tilt';
+    if (el.classList.contains('marker-card-3d')) return 'marker';
+    if (el.classList.contains('kapwa-level-row')) return 'kapwa';
+    if (el.classList.contains('trait-chip')) return 'trait';
+    return null;
+  }
+
+  // Pull presentable data out of a card
+  function extract(el, kind) {
+    const d = { tag: sectionTag(el), icon: '', iconSvg: '', title: '', body: '' };
+    if (kind === 'tilt') {
+      const badge = el.querySelector('.card-num-badge');
+      d.icon = badge ? collapse(badge.textContent) : '';
+      const t = el.querySelector('.card-title') || el.querySelector('h3');
+      d.title = collapse(t ? t.textContent : '');
+      const b = el.querySelector('.card-body') || el.querySelector('p');
+      d.body = collapse(b ? b.textContent : '');
+    } else if (kind === 'marker') {
+      const wrap = el.querySelector('.marker-icon-wrapper');
+      const svg = wrap ? wrap.querySelector('svg') : null;
+      d.iconSvg = svg ? svg.outerHTML : '';
+      const t = el.querySelector('h3');
+      d.title = collapse(t ? t.textContent : '');
+      const b = el.querySelector('p');
+      d.body = collapse(b ? b.textContent : '');
+    } else if (kind === 'kapwa') {
+      const rank = collapse(el.querySelector('.kapwa-level-rank') ? el.querySelector('.kapwa-level-rank').textContent : '');
+      const name = collapse(el.querySelector('.kapwa-level-name') ? el.querySelector('.kapwa-level-name').textContent : '');
+      const meaning = collapse(el.querySelector('.kapwa-level-meaning') ? el.querySelector('.kapwa-level-meaning').textContent : '');
+      d.icon = rank;
+      d.title = name;
+      d.body = meaning
+        ? meaning + (rank ? '  ·  Level ' + rank + ' of 8 in the Kapwa hierarchy of relationships.' : '')
+        : '';
+      d.tag = el.classList.contains('insider')
+        ? '09 · HINDI IBANG TAO (INSIDER)'
+        : '09 · IBANG TAO (OUTSIDER)';
+    } else if (kind === 'trait') {
+      d.icon = el.classList.contains('double-edged') ? '!' : '+';
+      d.title = collapse(el.querySelector('.trait-name') ? el.querySelector('.trait-name').textContent : '');
+      d.body = el.getAttribute('data-desc') || collapse(el.textContent);
+      const meta = el.querySelector('.trait-meta');
+      d.tag = '06 · FILIPINO TRAITS · ' + (meta ? collapse(meta.textContent).toUpperCase() : '');
+    }
+    return d;
+  }
+
+  // Which cards are "in the same group" (i.e. flippable with ← →)?
+  function buildGroup(el) {
+    const kind = kindOf(el);
+    let els = [];
+    if (kind === 'kapwa') {
+      els = Array.from(document.querySelectorAll('.kapwa-level-row'));
+    } else if (kind === 'trait') {
+      els = Array.from(document.querySelectorAll('.trait-chip'));
+    } else if (kind === 'tilt' || kind === 'marker') {
+      const cls = kind === 'tilt' ? 'tilt-card' : 'marker-card-3d';
+      const parent = el.parentElement;
+      els = parent
+        ? Array.from(parent.children).filter((c) => c.classList.contains(cls))
+        : [el];
+    }
+    if (!els.length) els = [el];
+    return els.map((e) => ({ el: e, data: extract(e, kind) }));
+  }
+
+  // ------------------------------------------------- scramble title decode
+  const CHARS = '!<>-_\\/[]{}—=+*^?#________';
+
+  function scrambleTo(node, text) {
+    cancelAnimationFrame(node._scrRaf);
+    const queue = [];
+    for (let i = 0; i < text.length; i++) {
+      const start = Math.floor(Math.random() * 16);
+      queue.push({ to: text[i], start, end: start + 10 + Math.floor(Math.random() * 22), ch: '' });
+    }
+    let frame = 0;
+    (function tick() {
+      let out = '';
+      let done = 0;
+      for (const q of queue) {
+        if (frame >= q.end) {
+          done++;
+          out += esc(q.to);
+        } else if (frame >= q.start) {
+          if (!q.ch || Math.random() < 0.32) {
+            q.ch = CHARS[Math.floor(Math.random() * CHARS.length)];
+          }
+          out += '<span class="scr-ch">' + q.ch + '</span>';
+        }
+      }
+      node.innerHTML = out;
+      frame++;
+      if (done === queue.length) return;
+      node._scrRaf = requestAnimationFrame(tick);
+    })();
+  }
+
+  // ------------------------------------------- staggered kinetic body words
+  function kineticBody(node, text) {
+    const words = text.split(' ');
+    node.classList.remove('shown');
+    node.innerHTML = words
+      .map((w, i) => `<span class="kin-body-word" style="transition-delay:${Math.min(i * 20, 850)}ms">${esc(w)}</span>`)
+      .join(' ');
+    void node.offsetWidth; // reflow so the transition restarts
+    requestAnimationFrame(() => node.classList.add('shown'));
+  }
+
+  // ---------------------------------------------------------------- render
+  function render(animate) {
+    if (!group.length) return;
+    const item = group[index];
+    const d = item.data;
+
+    elTag.textContent = d.tag;
+    elFootSection.textContent = sectionTag(item.el) + ' · UNDERSTANDING THE SELF · GROUP 8';
+    elIndex.textContent = String(index + 1).padStart(2, '0') + ' / ' + String(group.length).padStart(2, '0');
+
+    if (d.iconSvg) {
+      elIcon.classList.remove('num');
+      elIcon.innerHTML = d.iconSvg;
+    } else if (d.icon) {
+      elIcon.classList.add('num');
+      elIcon.textContent = d.icon;
+    } else {
+      elIcon.style.display = 'none';
+    }
+
+    if (animate) {
+      scrambleTo(elTitle, d.title);
+      kineticBody(elBody, d.body);
+      elIcon.classList.remove('spin');
+      void elIcon.offsetWidth;
+      elIcon.classList.add('spin');
+    } else {
+      elTitle.textContent = d.title;
+      elBody.classList.add('shown');
+      elBody.textContent = d.body;
+    }
+
+    // dots
+    dotsEl.innerHTML = '';
+    group.forEach((_, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'projector-dot' + (i === index ? ' active' : '');
+      dot.setAttribute('aria-label', 'Go to card ' + (i + 1));
+      dot.addEventListener('click', () => {
+        if (i !== index) nav(i > index ? 1 : -1, () => {});
+      });
+      dotsEl.appendChild(dot);
+    });
+
+    const single = group.length < 2;
+    prevBtn.disabled = single;
+    nextBtn.disabled = single;
+  }
+
+  // ------------------------------------------------------------- 3D tilt
+  function startTilt() {
+    stopTilt();
+    const loop = () => {
+      cX += (tX - cX) * 0.07;
+      cY += (tY - cY) * 0.07;
+      if (slide) {
+        slide.style.transform =
+          'rotateX(' + (-cY * 5.5).toFixed(3) + 'deg) rotateY(' + (cX * 7.5).toFixed(3) + 'deg)';
+      }
+      tiltRaf = requestAnimationFrame(loop);
+    };
+    tiltRaf = requestAnimationFrame(loop);
+  }
+
+  function stopTilt() {
+    if (tiltRaf) cancelAnimationFrame(tiltRaf);
+    tiltRaf = null;
+  }
+
+  function onMove(e) {
+    tX = ((e.clientX / window.innerWidth) - 0.5) * 2;   // -1 … 1
+    tY = ((e.clientY / window.innerHeight) - 0.5) * 2;
+  }
+
+  // -------------------------------------------------------------- open/close
+  function openFrom(el) {
+    if (!overlay || kindOf(el) === null) return;
+    group = buildGroup(el);
+    index = Math.max(0, group.findIndex((it) => it.el === el));
+
+    isOpen = true;
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    cX = cY = 0;
+    render(true);
+
+    slide.classList.remove('enter');
+    void slide.offsetWidth;
+    slide.classList.add('enter');
+
+    setTimeout(() => { slide.classList.remove('enter'); startTilt(); }, 800);
+    if (window.AppAudio) window.AppAudio.playChime(660, 'triangle');
+  }
+
+  function close() {
+    if (!isOpen || !overlay) return;
+    isOpen = false;
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    stopTilt();
+    if (slide) slide.style.transform = '';
+    if (window.AppAudio) window.AppAudio.playClick();
+  }
+
+  // ------------------------------------------------------- flip navigation
+  function nav(dir) {
+    if (!isOpen || transitionLock || group.length < 2) return;
+    transitionLock = true;
+    stopTilt();
+
+    const forward = dir > 0;
+    index = (index + dir + group.length) % group.length;
+
+    slide.classList.add(forward ? 'exit-left' : 'exit-right');
+    setTimeout(() => {
+      render(true);
+      slide.classList.remove('exit-left', 'exit-right');
+      slide.classList.add(forward ? 'enter-from-right' : 'enter-from-left');
+      setTimeout(() => {
+        slide.classList.remove('enter-from-right', 'enter-from-left');
+        transitionLock = false;
+        startTilt();
+      }, 620);
+    }, 360);
+    if (window.AppAudio) window.AppAudio.playClick();
+  }
+
+  // -------------------------------------------------------------- fullscreen
+  function toggleFullscreen() {
+    try {
+      if (!document.fullscreenElement) {
+        const p = document.documentElement.requestFullscreen();
+        if (p && p.catch) p.catch(() => {});
+      } else {
+        const p = document.exitFullscreen();
+        if (p && p.catch) p.catch(() => {});
+      }
+    } catch (err) {
+      /* fullscreen not available (e.g. in an iframe) — ignore */
+    }
+  }
+
+  // ------------------------------------------------------------------- init
+  function init() {
+    overlay = document.getElementById('projector-overlay');
+    if (!overlay) return;
+    stage = document.getElementById('projector-stage');
+    slide = document.getElementById('projector-slide');
+    elTag = document.getElementById('projector-tag');
+    elIcon = document.getElementById('projector-icon');
+    elTitle = document.getElementById('projector-title');
+    elBody = document.getElementById('projector-body');
+    elFootSection = document.getElementById('projector-foot-section');
+    elIndex = document.getElementById('projector-index');
+    prevBtn = document.getElementById('projector-prev-btn');
+    nextBtn = document.getElementById('projector-next-btn');
+    closeBtn = document.getElementById('projector-close-btn');
+    fsBtn = document.getElementById('projector-fs-btn');
+    dotsEl = document.getElementById('projector-dots');
+
+    // Click a plain card → project it. (Elements with their own click
+    // semantics — buttons, links, trait chips, kapwa rows — are skipped here;
+    // they use the dedicated present-btn below.)
+    document.addEventListener('click', (e) => {
+      if (isOpen) return;
+      if (e.target.closest('button, a, input, select, textarea, .trait-chip, .kapwa-level-row')) return;
+      const card = e.target.closest('.tilt-card, .marker-card-3d');
+      if (card) openFrom(card);
+    });
+
+    // Dedicated "project" buttons inside interactive rows/chips
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.present-btn');
+      if (!btn) return;
+      const host = btn.closest('.kapwa-level-row') || btn.closest('.trait-chip');
+      if (host) openFrom(host);
+    });
+
+    // Backdrop click closes
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close();
+    });
+
+    prevBtn.addEventListener('click', () => nav(-1));
+    nextBtn.addEventListener('click', () => nav(1));
+    closeBtn.addEventListener('click', close);
+    fsBtn.addEventListener('click', toggleFullscreen);
+
+    overlay.addEventListener('mousemove', onMove);
+
+    window.addEventListener('keydown', (e) => {
+      if (!isOpen) return;
+      if (e.key === 'Escape') {
+        close();
+      } else if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nav(1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        nav(-1);
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+  window.Projector = { openFrom };
+})();
